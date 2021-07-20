@@ -85,6 +85,8 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	} else if function == "query" {
 		// the old "Query" is now implemtned in invoke
 		return t.query(stub, args)
+	} else if function == "sgxQuery" {
+		return t.sgxQuery(stub, args)
 	}
 
 	return shim.Error("Invalid invoke function name. Expecting \"invoke\" \"delete\" \"query\"")
@@ -166,31 +168,38 @@ func (t *SimpleChaincode) delete(stub shim.ChaincodeStubInterface, args []string
 
 // query callback representing the query of a chaincode
 func (t *SimpleChaincode) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	//var A string // Entities
-	//var err error
-	//
-	//if len(args) != 1 {
-	//	return shim.Error("Incorrect number of arguments. Expecting name of the person to query")
-	//}
-	//
-	//A = args[0]
-	//
-	//// Get the state from the ledger
-	//Avalbytes, err := stub.GetState(A)
-	//if err != nil {
-	//	jsonResp := "{\"Error\":\"Failed to get state for " + A + "\"}"
-	//	return shim.Error(jsonResp)
-	//}
-	//
-	//if Avalbytes == nil {
-	//	jsonResp := "{\"Error\":\"Nil amount for " + A + "\"}"
-	//	return shim.Error(jsonResp)
-	//}
-	//
-	//jsonResp := "{\"Name\":\"" + A + "\",\"Amount\":\"" + string(Avalbytes) + "\"}"
-	//fmt.Printf("Query Response:%s\n", jsonResp)
-	//return shim.Success(Avalbytes)
+	var A string // Entities
+	var err error
+
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting name of the person to query")
+	}
+
+	A = args[0]
+
+	// Get the state from the ledger
+	Avalbytes, err := stub.GetState(A)
+	if err != nil {
+		jsonResp := "{\"Error\":\"Failed to get state for " + A + "\"}"
+		return shim.Error(jsonResp)
+	}
+
+	if Avalbytes == nil {
+		jsonResp := "{\"Error\":\"Nil amount for " + A + "\"}"
+		return shim.Error(jsonResp)
+	}
+
+	jsonResp := "{\"Name\":\"" + A + "\",\"Amount\":\"" + string(Avalbytes) + "\"}"
+	fmt.Printf("Query Response:%s\n", jsonResp)
+	return shim.Success(Avalbytes)
+}
+
+func (t *SimpleChaincode) sgxQuery(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var buffer bytes.Buffer
+	if args == nil {
+		buffer.WriteString("there is no-chain data used in this Tx.")
+		return shim.Success(buffer.Bytes())
+	}
 	for arg := range args {
 		value, err := stub.GetState(args[arg])
 		if err != nil {
