@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
@@ -87,6 +88,8 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.query(stub, args)
 	} else if function == "sgxQuery" {
 		return t.sgxQuery(stub, args)
+	} else if function == "sgxWrite" {
+		return t.sgxWrite(stub, args)
 	}
 
 	return shim.Error("Invalid invoke function name. Expecting \"invoke\" \"delete\" \"query\"")
@@ -200,24 +203,41 @@ func (t *SimpleChaincode) sgxQuery(stub shim.ChaincodeStubInterface, args []stri
 		buffer.WriteString("there is no-chain data used in this Tx.")
 		return shim.Success(buffer.Bytes())
 	}
-	for arg := range args {
-		value, err := stub.GetState(args[arg])
+	queryArgs := Split47(args[0])
+	for _,v := range queryArgs {
+		value, err := stub.GetState(v)
 		if err != nil {
-			jsonResp := "{\"Error\":\"Failed to get state for " + args[arg] + "\"}"
+			jsonResp := "{\"Error\":\"Failed to get state for " + v + "\"}"
 			return shim.Error(jsonResp)
 		}
 		if value == nil {
-			jsonResp := "{\"Error\":\"Nil amount for " + args[arg] + "\"}"
+			jsonResp := "{\"Error\":\"Nil amount for " + v + "\"}"
 			return shim.Error(jsonResp)
 		}
-		jsonResp := "{\"Name\":\"" + args[arg] + "\",\"Amount\":\"" + string(value) + "\"}"
+		jsonResp := "{\"Name\":\"" + v + "\",\"Amount\":\"" + string(value) + "\"}"
 		fmt.Println(jsonResp)
-		buffer.WriteString(args[arg])
-		buffer.WriteString(": ")
 		buffer.Write(value)
-		buffer.WriteString("  ")
+		buffer.WriteString("/")
 	}
 	return shim.Success(buffer.Bytes())
+}
+
+func (t *SimpleChaincode) sgxWrite(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	// 注意args内的第一个参数，表示函数名的参数，在此处不算在角标内，因此0代表第一个后续参数
+	onChainWrite := Split47(args[1])
+	results := Split47(args[3])
+	for k, v := range onChainWrite {
+		err := stub.PutState(v, []byte(results[k]))
+		fmt.Println("write ", v, "to ", results[k])
+		if err != nil {
+			return shim.Error("sgx write fail")
+		}
+	}
+	return shim.Success([]byte("sgx write success"))
+}
+
+func Split47(strIn string)  []string {
+	return strings.Split(strIn, "/")
 }
 
 func main() {
