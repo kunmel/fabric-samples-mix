@@ -224,8 +224,16 @@ func (t *SimpleChaincode) sgxQuery(stub shim.ChaincodeStubInterface, args []stri
 
 func (t *SimpleChaincode) sgxWrite(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	// 注意args内的第一个参数，表示函数名的参数，在此处不算在角标内，因此0代表第一个后续参数
+	onChainRead := Split47(args[0])
 	onChainWrite := Split47(args[1])
 	results := Split47(args[3])
+	for _,v := range onChainRead {
+		_,err := stub.GetState(v)
+		if err != nil {
+			errRes := "Failed to get state for " + v
+			return shim.Error(errRes)
+		}
+	}
 	for k, v := range onChainWrite {
 		err := stub.PutState(v, []byte(results[k]))
 		fmt.Println("write ", v, "to ", results[k])
