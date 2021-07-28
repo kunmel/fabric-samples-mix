@@ -204,6 +204,7 @@ func (t *SimpleChaincode) sgxQuery(stub shim.ChaincodeStubInterface, args []stri
 		return shim.Success(buffer.Bytes())
 	}
 	queryArgs := Split47(args[0])
+	buffer.WriteString(args[0])
 	for _,v := range queryArgs {
 		value, err := stub.GetState(v)
 		if err != nil {
@@ -216,8 +217,8 @@ func (t *SimpleChaincode) sgxQuery(stub shim.ChaincodeStubInterface, args []stri
 		}
 		jsonResp := "{\"Name\":\"" + v + "\",\"Amount\":\"" + string(value) + "\"}"
 		fmt.Println(jsonResp)
-		buffer.Write(value)
 		buffer.WriteString("/")
+		buffer.Write(value)
 	}
 	return shim.Success(buffer.Bytes())
 }

@@ -307,13 +307,13 @@ chaincodeInvoke() {
   if [ -z "$CORE_PEER_TLS_ENABLED" -o "$CORE_PEER_TLS_ENABLED" = "false" ]; then
     set -x
     peer chaincode invoke -o orderer.example.com:7050 -C $CHANNEL_NAME -n mycc $PEER_CONN_PARMS -s true -r true --workLoad "workload4" --offChainData "c" -c '{"Args":["sgxQuery","a/b","a/b","c",""]}' >&log.txt
-    # peer chaincode invoke -o orderer.example.com:7050 -C $CHANNEL_NAME -n mycc $PEER_CONN_PARMS -s true -r true --workLoad "workload4" --offChainData "t1/t3/t5" -c '{"Args":["invoke","a","b","10"]}' >&log.txt
+    # peer chaincode invoke -o orderer.example.com:7050 -C $CHANNEL_NAME -n mycc $PEER_CONN_PARMS  -s true -c '{"Args":["invoke","a","b","10"]}' >&log.txt
     res=$?
     set +x
   else
     set -x
     peer chaincode invoke -o orderer.example.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C $CHANNEL_NAME -n mycc $PEER_CONN_PARMS -s true -r true --workLoad "workload4" --offChainData "c" -c '{"Args":["sgxQuery","a/b","a/b","c",""]}' >&log.txt
-    # peer chaincode invoke -o orderer.example.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C $CHANNEL_NAME -n mycc $PEER_CONN_PARMS -s true -r true --workLoad "workload4" --offChainData "t1/t3/t5" -c '{"Args":["invoke","a","b","10"]}' >&log.txt
+    # peer chaincode invoke -o orderer.example.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C $CHANNEL_NAME -n mycc $PEER_CONN_PARMS -s true -c '{"Args":["invoke","a","b","10"]}' >&log.txt
     res=$?
     set +x
   fi
