@@ -24,6 +24,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -34,6 +35,12 @@ import (
 
 // SimpleChaincode example simple Chaincode implementation
 type SimpleChaincode struct {
+}
+
+type LedgerData struct {
+	ID int
+	Price string
+	Label string
 }
 
 func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -90,6 +97,12 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.sgxQuery(stub, args)
 	} else if function == "sgxTx" {
 		return t.sgxTx(stub, args)
+	} else if function == "onchainTx" {
+		return t.onchainTx(stub,args)
+	} else if function == "writeLedger" {
+		return t.writeLedger(stub, args)
+	} else if function == "readLedger" {
+		return t.readLedger(stub,args)
 	}
 
 	return shim.Error("Invalid invoke function name. Expecting \"invoke\" \"delete\" \"query\"")
@@ -260,6 +273,70 @@ func (t *SimpleChaincode) sgxTx(stub shim.ChaincodeStubInterface, args []string)
 	return shim.SgxSuccess(buffer.Bytes(), sgxFlag, sgxRead, args[3], args[4], "mycc")
 }
 
+func (t *SimpleChaincode) onchainTx(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var buffer bytes.Buffer
+	if args == nil {
+		return shim.Error(" no enough args")
+	}
+	queryArgs := Split47(args[0])
+	buffer.WriteString(args[0])
+	for _,v := range queryArgs {
+		value, err := stub.GetState(v)
+		if err != nil {
+			jsonResp := "{\"Error\":\"Failed to get state for " + v + "\"}"
+			return shim.Error(jsonResp)
+		}
+		if value == nil {
+			jsonResp := "{\"Error\":\"Nil amount for " + v + "\"}"
+			return shim.Error(jsonResp)
+		}
+		jsonResp := "{\"Name\":\"" + v + "\",\"Amount\":\"" + string(value) + "\"}"
+		fmt.Println(jsonResp)
+		num,_ := strconv.Atoi(string(value))
+		num++
+		err = stub.PutState(v, []byte(strconv.Itoa(num)))
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+	}
+	return shim.Success(nil)
+}
+
+func (t *SimpleChaincode) writeLedger(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	ID,_ := strconv.Atoi(args[0])
+	data := LedgerData{ID: ID, Price: args[1], Label: args[2]}
+	key, err := stub.CreateCompositeKey(args[0], args[1:])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	stub.PutState(key, bytes)
+	return shim.Success(nil)
+}
+
+func (t *SimpleChaincode) readLedger(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	re, err := stub.GetStateByPartialCompositeKey(args[0],[]string{})
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer re.Close()
+	for re.HasNext() {
+		responseRange, err := re.Next()
+		if err != nil {
+			fmt.Println(err)
+		}
+		data := new(LedgerData)
+		err = json.Unmarshal(responseRange.Value, data)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(responseRange.Key, data)
+	}
+	return shim.Success(nil)
+}
 func Split47(strIn string)  []string {
 	return strings.Split(strIn, "/")
 }
